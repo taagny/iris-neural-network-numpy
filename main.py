@@ -108,6 +108,13 @@ def main():
                 f"Acurácia de treino: {acuracia * 100:.2f}%"
             )
 
+    # O conjunto de teste só é usado para avaliar a rede após o treinamento.
+    _, _, probabilidades_teste = propagacao_direta(entradas_teste, parametros)
+    previsoes_teste = np.argmax(probabilidades_teste, axis=1)
+    rotulos_teste = np.argmax(saidas_teste, axis=1)
+    acuracia_teste = np.mean(previsoes_teste == rotulos_teste)
+    print(f"\nAcurácia final no teste: {acuracia_teste * 100:.2f}%")
+
 
 if __name__ == "__main__":
     main()
