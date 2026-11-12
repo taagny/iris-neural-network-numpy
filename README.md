@@ -1,80 +1,217 @@
-# Rede neural para classificar o Iris
+# Classificação do Iris com uma rede neural do zero
 
-Atividade acadêmica de Inteligência Artificial do curso de Ciência da Computação.
-O projeto implementa uma rede neural do zero para classificar as espécies
-Iris setosa, Iris versicolor e Iris virginica a partir de quatro medidas da flor.
+**Atividade acadêmica de Inteligência Artificial · Ciência da Computação**
 
-Toda a lógica da rede está em `main.py` e usa apenas NumPy: operações matriciais,
-ativações, perda, backpropagation, atualização dos pesos e cálculo da acurácia.
-O Scikit-Learn é usado somente para carregar o Iris, dividir os dados e padronizar
-as entradas. Não há uso de modelos prontos.
+Uma rede neural implementada em Python para classificar três espécies de flores
+a partir de quatro medidas. O projeto acompanha todo o processo de aprendizado:
+preparação dos dados, propagação direta, cálculo da perda, backpropagation e
+atualização dos pesos com gradiente descendente.
 
-## Como instalar
+Toda a lógica da rede usa **NumPy** e está em um único arquivo, [`main.py`](main.py).
+O **Scikit-Learn** é utilizado exclusivamente para carregar e preparar os dados.
 
-No terminal, dentro da pasta do projeto, use o ambiente virtual `.venv`.
-Caso ainda não exista, crie com `python -m venv .venv`.
+> **Resultado obtido:** 96,67% de acurácia no teste — 29 classificações corretas
+> em 30 amostras, após 1000 épocas de treinamento.
 
-No Windows (PowerShell), instale as dependências com:
+## Objetivo da atividade
+
+Compreender como uma rede neural aprende sem utilizar modelos prontos. A
+implementação explicita as operações matriciais e a regra da cadeia usadas para
+ajustar os parâmetros de uma rede com uma camada escondida.
+
+## Dataset e preparação dos dados
+
+O Iris é carregado por `load_iris`, sem necessidade de baixar arquivos separados.
+São 150 amostras, distribuídas igualmente entre três espécies.
+
+| Entradas da rede | Unidade |
+| --- | --- |
+| Comprimento da sépala | cm |
+| Largura da sépala | cm |
+| Comprimento da pétala | cm |
+| Largura da pétala | cm |
+
+| Classe | Espécie | Representação one-hot |
+| --- | --- | --- |
+| 0 | Iris setosa | `[1, 0, 0]` |
+| 1 | Iris versicolor | `[0, 1, 0]` |
+| 2 | Iris virginica | `[0, 0, 1]` |
+
+A preparação segue esta sequência:
+
+1. Divisão estratificada em **80% para treino** e **20% para teste**, com
+   `random_state=42`, preservando a proporção das classes.
+2. Ajuste do `StandardScaler` somente nas entradas de treino, para obter média
+   zero e desvio padrão um em cada característica desse conjunto.
+3. Transformação das entradas de teste com as estatísticas calculadas no treino,
+   evitando vazamento de dados.
+4. Conversão dos rótulos para one-hot com `np.eye(3)`.
+
+| Conjunto | Amostras | Amostras por espécie | Formato das entradas | Formato dos rótulos |
+| --- | --- | --- | --- | --- |
+| Treino | 120 | 40 | `120 × 4` | `120 × 3` |
+| Teste | 30 | 10 | `30 × 4` | `30 × 3` |
+
+## Arquitetura da rede
+
+```mermaid
+flowchart LR
+    E["Entrada: 4 características"] --> H["Camada escondida: 8 neurônios · ReLU"]
+    H --> S["Saída: 3 neurônios · Softmax"]
+    S --> C["Classe prevista: argmax"]
+```
+
+| Parâmetro | Dimensão | Inicialização |
+| --- | --- | --- |
+| `W1` | `4 × 8` | `np.random.randn(4, 8) * 0.1` |
+| `b1` | `1 × 8` | Zeros |
+| `W2` | `8 × 3` | `np.random.randn(8, 3) * 0.1` |
+| `b2` | `1 × 3` | Zeros |
+
+A rede possui **67 parâmetros treináveis**. A inicialização usa
+`np.random.seed(42)` para permitir a reprodução do experimento.
+
+## Como o aprendizado acontece
+
+### 1. Propagação direta
+
+As entradas percorrem as duas camadas:
+
+```text
+Z1 = X @ W1 + b1
+A1 = ReLU(Z1)
+Z2 = A1 @ W2 + b2
+A2 = Softmax(Z2)
+```
+
+A ReLU retorna `max(0, x)`. Sua derivada vale 1 para valores positivos e 0
+para valores menores ou iguais a zero, conforme implementado no projeto.
+
+A softmax transforma as saídas em probabilidades cuja soma é 1 em cada amostra.
+Antes de calcular as exponenciais, o maior valor de cada linha é subtraído para
+evitar estouro numérico.
+
+### 2. Cálculo da perda
+
+A entropia cruzada mede a diferença entre as probabilidades previstas e os
+rótulos esperados:
+
+```text
+Loss = -soma(Y * log(A2 + epsilon)) / m
+```
+
+`m` é o número de amostras e `epsilon = 1e-10` evita o cálculo de `log(0)`.
+A perda é calculada como a média entre as amostras.
+
+### 3. Backpropagation
+
+Os gradientes são calculados da saída para a entrada, pela regra da cadeia:
+
+```text
+dZ2 = (A2 - Y) / m
+dW2 = A1.T @ dZ2
+db2 = soma de dZ2 por coluna
+dA1 = dZ2 @ W2.T
+dZ1 = dA1 * ReLU'(Z1)
+dW1 = X.T @ dZ1
+db1 = soma de dZ1 por coluna
+```
+
+As somas dos gradientes dos vieses mantêm as dimensões `1 × 3` e `1 × 8`.
+
+### 4. Atualização dos parâmetros
+
+Cada época utiliza todas as amostras de treino para calcular os gradientes.
+Pesos e vieses são atualizados por gradiente descendente:
+
+```text
+parâmetro = parâmetro - taxa_aprendizado * gradiente
+```
+
+| Configuração | Valor |
+| --- | --- |
+| Épocas | 1000 |
+| Taxa de aprendizado | 0,1 |
+| Amostras por atualização | 120, todo o conjunto de treino |
+| Intervalo dos logs | A cada 100 épocas |
+| Seed do NumPy | 42 |
+| Estado aleatório da divisão | 42 |
+
+Os logs mostram a perda e a acurácia de treino após a atualização da época.
+Ao final, a rede faz uma propagação direta no teste e escolhe a classe de maior
+probabilidade com `argmax`.
+
+## Instalação e execução
+
+É necessário ter Python 3 e as dependências de [`requirements.txt`](requirements.txt).
+Execute os comandos a partir da pasta do projeto. Se a `.venv` já existir,
+pule o comando de criação do ambiente.
+
+### Windows — PowerShell
 
 ```powershell
+python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-No Linux ou macOS:
-
-```bash
-.venv/bin/python -m pip install -r requirements.txt
-```
-
-## Como rodar
-
-No Windows (PowerShell):
-
-```powershell
 .\.venv\Scripts\python.exe main.py
 ```
 
-No Linux ou macOS:
+### Linux ou macOS
 
 ```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python main.py
 ```
 
-O Iris já acompanha o Scikit-Learn, então não é necessário baixar arquivos de dados.
-O script mostra a loss e a acurácia de treino a cada 100 épocas e, ao terminar,
-exibe a acurácia no conjunto de teste.
+Os comandos usam diretamente o Python do ambiente virtual, sem precisar ativá-lo.
+No PyCharm, selecione o interpretador da `.venv` do projeto e execute `main.py`.
 
-## Como a rede funciona
+## Resultados
 
-- Dados: 120 amostras de treino (80%) e 30 de teste (20%), com divisão estratificada
-  e `random_state=42`.
-- Padronização: o `StandardScaler` é ajustado apenas no treino e aplicado ao teste.
-- Rótulos: one-hot de tamanho 3, montado com NumPy.
-- Arquitetura: 4 entradas, 8 neurônios escondidos com ReLU e 3 saídas com softmax.
-- Inicialização: pesos aleatórios multiplicados por 0,1, vieses zerados e
-  `np.random.seed(42)`.
-- Perda: entropia cruzada média com epsilon no logaritmo.
-- Treinamento: gradiente descendente com todas as amostras de treino, 1000 épocas
-  e taxa de aprendizado de 0,1.
-- Avaliação: a classe prevista é o `argmax` das probabilidades. O teste é avaliado
-  depois do treinamento e não participa da atualização dos pesos.
-
-O forward pass calcula as ativações das duas camadas. O backpropagation calcula
-os gradientes pela regra da cadeia, e cada parâmetro é atualizado subtraindo
-a taxa de aprendizado multiplicada pelo seu gradiente.
-
-## Resultado obtido
-
-Com a configuração acima, a execução produziu:
+Trecho da saída obtida com a configuração padrão:
 
 ```text
+Treino: 120 amostras; teste: 30 amostras.
+Época  100 | Loss: 0.3821 | Acurácia de treino: 86.67%
+Época  200 | Loss: 0.2007 | Acurácia de treino: 92.50%
+Época  300 | Loss: 0.1248 | Acurácia de treino: 95.83%
+...
 Época 1000 | Loss: 0.0514 | Acurácia de treino: 97.50%
+
 Acurácia final no teste: 96.67%
 ```
 
-Foram classificadas corretamente 29 das 30 amostras de teste. Esse resultado se
-refere à divisão fixa usada nesta atividade.
+| Métrica | Resultado |
+| --- | --- |
+| Loss de treino após 1000 épocas | 0,0514 |
+| Acurácia de treino | 97,50% — 117 de 120 amostras |
+| Acurácia de teste | **96,67% — 29 de 30 amostras** |
 
-Execução validada com Python 3.14.7, NumPy 2.5.4 e Scikit-Learn 1.9.1.
-As ativações também foram verificadas com entradas grandes na softmax, e os
-gradientes foram conferidos por diferenças finitas.
+A acurácia é calculada com NumPy pela proporção de previsões corretas. O
+conjunto de teste não participa do ajuste do padronizador nem da atualização
+dos pesos.
+
+O resultado corresponde a uma única divisão fixa do Iris. Não foi realizada
+validação cruzada; portanto, a acurácia apresentada descreve esse experimento.
+
+## Organização do projeto
+
+```text
+ia-rede-neural-iris-numpy/
+├── main.py           Implementação completa e execução do experimento
+├── requirements.txt  Dependências: NumPy e Scikit-Learn
+├── .gitignore        Exclusão da .venv, .idea e arquivos de cache
+└── README.md         Documentação da atividade
+```
+
+## Verificações realizadas
+
+- Conferência das dimensões das entradas, rótulos, pesos e vieses.
+- Verificação da padronização e da distribuição das classes nos conjuntos.
+- Conferência da ReLU, de sua derivada e da estabilidade numérica da softmax.
+- Comparação dos gradientes do backpropagation com diferenças finitas.
+- Execuções repetidas para conferir a reprodutibilidade dos resultados.
+
+O experimento foi executado com **Python 3.14.7**, **NumPy 2.5.4** e
+**Scikit-Learn 1.9.1**. O `requirements.txt` lista as dependências sem fixar versões;
+para reproduzir o ambiente validado, utilize essas mesmas versões.
