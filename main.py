@@ -23,11 +23,36 @@ def preparar_dados():
     return entradas_treino, entradas_teste, saidas_treino, saidas_teste
 
 
+def relu(valores):
+    return np.maximum(0, valores)
+
+
+def derivada_relu(valores):
+    return (valores > 0).astype(float)
+
+
+def softmax(valores):
+    # Subtrair o maior valor de cada linha evita estouro na exponencial.
+    exponenciais = np.exp(valores - np.max(valores, axis=1, keepdims=True))
+    return exponenciais / np.sum(exponenciais, axis=1, keepdims=True)
+
+
+def inicializar_parametros():
+    return {
+        "W1": np.random.randn(4, 8) * 0.1,
+        "b1": np.zeros((1, 8)),
+        "W2": np.random.randn(8, 3) * 0.1,
+        "b2": np.zeros((1, 3)),
+    }
+
+
 def main():
     np.random.seed(42)
     entradas_treino, entradas_teste, saidas_treino, saidas_teste = preparar_dados()
     print(f"Treino: {entradas_treino.shape[0]} amostras; teste: {entradas_teste.shape[0]} amostras.")
     print(f"Rótulos one-hot: treino {saidas_treino.shape}, teste {saidas_teste.shape}.")
+    parametros = inicializar_parametros()
+    print(f"Pesos: W1 {parametros['W1'].shape}, W2 {parametros['W2'].shape}.")
 
 
 if __name__ == "__main__":
