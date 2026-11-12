@@ -81,14 +81,17 @@ def atualizar_parametros(parametros, gradientes, taxa_aprendizado):
 
 def main():
     np.random.seed(42)
-    entradas_treino, entradas_teste, saidas_treino, saidas_teste = preparar_dados()
-    print(f"Treino: {entradas_treino.shape[0]} amostras; teste: {entradas_teste.shape[0]} amostras.")
-    print(f"Rótulos one-hot: treino {saidas_treino.shape}, teste {saidas_teste.shape}.")
-    parametros = inicializar_parametros()
-    print(f"Pesos: W1 {parametros['W1'].shape}, W2 {parametros['W2'].shape}.")
     taxa_aprendizado = 0.1
     quantidade_epocas = 1000
 
+    entradas_treino, entradas_teste, saidas_treino, saidas_teste = preparar_dados()
+    print(
+        f"Treino: {entradas_treino.shape[0]} amostras; "
+        f"teste: {entradas_teste.shape[0]} amostras."
+    )
+    parametros = inicializar_parametros()
+
+    # Cada atualização usa todas as amostras de treino (gradiente descendente).
     for epoca in range(1, quantidade_epocas + 1):
         z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
         gradientes = retropropagacao(
