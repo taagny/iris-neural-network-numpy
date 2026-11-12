@@ -1,5 +1,3 @@
-"""Rede neural com NumPy para classificar as flores do Iris."""
-
 import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
@@ -12,12 +10,10 @@ def preparar_dados():
         iris.data, iris.target, test_size=0.2, random_state=42, stratify=iris.target
     )
 
-    # O teste usa a média e o desvio do treino para evitar vazamento de dados.
     padronizador = StandardScaler()
     entradas_treino = padronizador.fit_transform(entradas_treino)
     entradas_teste = padronizador.transform(entradas_teste)
 
-    # Cada linha da matriz identidade representa uma das três espécies.
     saidas_treino = np.eye(3)[rotulos_treino]
     saidas_teste = np.eye(3)[rotulos_teste]
     return entradas_treino, entradas_teste, saidas_treino, saidas_teste
@@ -32,7 +28,6 @@ def derivada_relu(valores):
 
 
 def softmax(valores):
-    # Subtrair o maior valor de cada linha evita estouro na exponencial.
     exponenciais = np.exp(valores - np.max(valores, axis=1, keepdims=True))
     return exponenciais / np.sum(exponenciais, axis=1, keepdims=True)
 
@@ -62,7 +57,6 @@ def entropia_cruzada(probabilidades, saidas):
 def retropropagacao(entradas, saidas, z1, a1, a2, parametros):
     quantidade_amostras = entradas.shape[0]
 
-    # A derivada da softmax com entropia cruzada simplifica para (A2 - Y) / m.
     dz2 = (a2 - saidas) / quantidade_amostras
     dw2 = a1.T @ dz2
     db2 = np.sum(dz2, axis=0, keepdims=True)
@@ -91,7 +85,6 @@ def main():
     )
     parametros = inicializar_parametros()
 
-    # Cada atualização usa todas as amostras de treino (gradiente descendente).
     for epoca in range(1, quantidade_epocas + 1):
         z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
         gradientes = retropropagacao(
@@ -100,7 +93,6 @@ def main():
         atualizar_parametros(parametros, gradientes, taxa_aprendizado)
 
         if epoca % 100 == 0:
-            # O log mostra o resultado depois da atualização desta época.
             _, _, probabilidades = propagacao_direta(entradas_treino, parametros)
             perda = entropia_cruzada(probabilidades, saidas_treino)
             previsoes = np.argmax(probabilidades, axis=1)
@@ -111,7 +103,6 @@ def main():
                 f"Acurácia de treino: {acuracia * 100:.2f}%"
             )
 
-    # O conjunto de teste só é usado para avaliar a rede após o treinamento.
     _, _, probabilidades_teste = propagacao_direta(entradas_teste, parametros)
     previsoes_teste = np.argmax(probabilidades_teste, axis=1)
     rotulos_teste = np.argmax(saidas_teste, axis=1)
