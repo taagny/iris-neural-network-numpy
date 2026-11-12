@@ -86,16 +86,27 @@ def main():
     print(f"Rótulos one-hot: treino {saidas_treino.shape}, teste {saidas_teste.shape}.")
     parametros = inicializar_parametros()
     print(f"Pesos: W1 {parametros['W1'].shape}, W2 {parametros['W2'].shape}.")
-    z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
-    perda = entropia_cruzada(probabilidades, saidas_treino)
-    print(f"Loss inicial: {perda:.4f}")
     taxa_aprendizado = 0.1
-    gradientes = retropropagacao(
-        entradas_treino, saidas_treino, z1, a1, probabilidades, parametros
-    )
-    atualizar_parametros(parametros, gradientes, taxa_aprendizado)
-    _, _, probabilidades = propagacao_direta(entradas_treino, parametros)
-    print(f"Loss após uma atualização: {entropia_cruzada(probabilidades, saidas_treino):.4f}")
+    quantidade_epocas = 1000
+
+    for epoca in range(1, quantidade_epocas + 1):
+        z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
+        gradientes = retropropagacao(
+            entradas_treino, saidas_treino, z1, a1, probabilidades, parametros
+        )
+        atualizar_parametros(parametros, gradientes, taxa_aprendizado)
+
+        if epoca % 100 == 0:
+            # O log mostra o resultado depois da atualização desta época.
+            _, _, probabilidades = propagacao_direta(entradas_treino, parametros)
+            perda = entropia_cruzada(probabilidades, saidas_treino)
+            previsoes = np.argmax(probabilidades, axis=1)
+            rotulos = np.argmax(saidas_treino, axis=1)
+            acuracia = np.mean(previsoes == rotulos)
+            print(
+                f"Época {epoca:4d} | Loss: {perda:.4f} | "
+                f"Acurácia de treino: {acuracia * 100:.2f}%"
+            )
 
 
 if __name__ == "__main__":
