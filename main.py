@@ -46,6 +46,19 @@ def inicializar_parametros():
     }
 
 
+def propagacao_direta(entradas, parametros):
+    z1 = entradas @ parametros["W1"] + parametros["b1"]
+    a1 = relu(z1)
+    z2 = a1 @ parametros["W2"] + parametros["b2"]
+    a2 = softmax(z2)
+    return z1, a1, a2
+
+
+def entropia_cruzada(probabilidades, saidas):
+    epsilon = 1e-10
+    return -np.mean(np.sum(saidas * np.log(probabilidades + epsilon), axis=1))
+
+
 def main():
     np.random.seed(42)
     entradas_treino, entradas_teste, saidas_treino, saidas_teste = preparar_dados()
@@ -53,6 +66,9 @@ def main():
     print(f"Rótulos one-hot: treino {saidas_treino.shape}, teste {saidas_teste.shape}.")
     parametros = inicializar_parametros()
     print(f"Pesos: W1 {parametros['W1'].shape}, W2 {parametros['W2'].shape}.")
+    z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
+    perda = entropia_cruzada(probabilidades, saidas_treino)
+    print(f"Loss inicial: {perda:.4f}")
 
 
 if __name__ == "__main__":
