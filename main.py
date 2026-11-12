@@ -59,6 +59,26 @@ def entropia_cruzada(probabilidades, saidas):
     return -np.mean(np.sum(saidas * np.log(probabilidades + epsilon), axis=1))
 
 
+def retropropagacao(entradas, saidas, z1, a1, a2, parametros):
+    quantidade_amostras = entradas.shape[0]
+
+    # A derivada da softmax com entropia cruzada simplifica para (A2 - Y) / m.
+    dz2 = (a2 - saidas) / quantidade_amostras
+    dw2 = a1.T @ dz2
+    db2 = np.sum(dz2, axis=0, keepdims=True)
+    da1 = dz2 @ parametros["W2"].T
+    dz1 = da1 * derivada_relu(z1)
+    dw1 = entradas.T @ dz1
+    db1 = np.sum(dz1, axis=0, keepdims=True)
+
+    return {"W1": dw1, "b1": db1, "W2": dw2, "b2": db2}
+
+
+def atualizar_parametros(parametros, gradientes, taxa_aprendizado):
+    for nome in parametros:
+        parametros[nome] -= taxa_aprendizado * gradientes[nome]
+
+
 def main():
     np.random.seed(42)
     entradas_treino, entradas_teste, saidas_treino, saidas_teste = preparar_dados()
@@ -69,6 +89,13 @@ def main():
     z1, a1, probabilidades = propagacao_direta(entradas_treino, parametros)
     perda = entropia_cruzada(probabilidades, saidas_treino)
     print(f"Loss inicial: {perda:.4f}")
+    taxa_aprendizado = 0.1
+    gradientes = retropropagacao(
+        entradas_treino, saidas_treino, z1, a1, probabilidades, parametros
+    )
+    atualizar_parametros(parametros, gradientes, taxa_aprendizado)
+    _, _, probabilidades = propagacao_direta(entradas_treino, parametros)
+    print(f"Loss após uma atualização: {entropia_cruzada(probabilidades, saidas_treino):.4f}")
 
 
 if __name__ == "__main__":
